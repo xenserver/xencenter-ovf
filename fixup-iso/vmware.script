@@ -1,0 +1,39 @@
+DeleteValue /HKLM/Software/Microsoft/Windows/CurrentVersion/run "VMware Tools"
+DeleteValue /HKLM/Software/Microsoft/Windows/CurrentVersion/run "VMware User Process"
+
+WriteNumberValue "/HKLM/System/ControlSet001/Services/VMWare PhysicalDisk Helper Server" Start 4
+WriteNumberValue "/HKLM/System/ControlSet002/Services/VMWare PhysicalDisk Helper Server" Start 4
+WriteNumberValue "/HKLM/System/CurrentControlSet/Services/VMWare PhysicalDisk Helper Server" Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/VMTools Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/VMTools Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/VMTools Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/vmdesched Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/vmdesched Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/vmdesched Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/vmdesched-driver Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/vmdesched-driver Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/vmdesched-driver Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/VMMEMCTL Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/VMMEMCTL Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/VMMEMCTL Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/vmxnet Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/vmxnet Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/vmxnet Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/vmx_svga Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/vmx_svga Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/vmx_svga Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/vmscsi Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/vmscsi Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/vmscsi Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/vmmouse Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/vmmouse Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/vmmouse Start 4
+

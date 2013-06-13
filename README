@@ -1,0 +1,12 @@
+This repository contains the source code for the Operating System Fixup ISO.
+
+The Operating System Fixup is an advanced hypervisor interoperability feature
+included in XenCenter, which aims to ensure a basic level of interoperability
+for VMs that are imported to XenServer. You will need to use Operating System
+Fixup when importing VMs created on other hypervisors from OVF/OVA packages
+and disk images.
+
+How to build Operating System Fixup ISO
+=======================================
+The repository contains a Makefile, so the OS Fixup ISO can be easily built 
+with the make utility.

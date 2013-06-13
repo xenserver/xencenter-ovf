@@ -1,0 +1,67 @@
+CreateKey /HKLM/System/ControlSet001/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101
+WriteStringValue /HKLM/System/ControlSet001/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101 ClassGUID {4D36E96A-E325-11CE-BFC1-08002BE10318}
+WriteStringValue /HKLM/System/ControlSet001/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101 Service IntelIde
+
+CreateKey /HKLM/System/ControlSet002/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101
+WriteStringValue /HKLM/System/ControlSet002/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101 ClassGUID {4D36E96A-E325-11CE-BFC1-08002BE10318}
+WriteStringValue /HKLM/System/ControlSet002/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101 Service IntelIde
+
+CreateKey /HKLM/System/CurrentControlSet/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101
+WriteStringValue /HKLM/System/CurrentControlSet/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101 ClassGUID {4D36E96A-E325-11CE-BFC1-08002BE10318}
+WriteStringValue /HKLM/System/CurrentControlSet/Control/CriticalDeviceDatabase/pci#ven_8086&CC_0101 Service IntelIde
+
+CreateKey /HKLM/System/ControlSet001/Control/CriticalDeviceDatabase/*pnp0600
+WriteStringValue /HKLM/System/ControlSet001/Control/CriticalDeviceDatabase/*pnp0600 ClassGUID {4D36E96A-E325-11CE-BFC1-08002BE10318}
+WriteStringValue /HKLM/System/ControlSet001/Control/CriticalDeviceDatabase/*pnp0600 Service atapi
+
+CreateKey /HKLM/System/ControlSet002/Control/CriticalDeviceDatabase/*pnp0600
+WriteStringValue /HKLM/System/ControlSet002/Control/CriticalDeviceDatabase/*pnp0600 ClassGUID {4D36E96A-E325-11CE-BFC1-08002BE10318}
+WriteStringValue /HKLM/System/ControlSet002/Control/CriticalDeviceDatabase/*pnp0600 Service atapi
+
+CreateKey /HKLM/System/CurrentControlSet/Control/CriticalDeviceDatabase/*pnp0600
+WriteStringValue /HKLM/System/CurrentControlSet/Control/CriticalDeviceDatabase/*pnp0600 ClassGUID {4D36E96A-E325-11CE-BFC1-08002BE10318}
+WriteStringValue /HKLM/System/CurrentControlSet/Control/CriticalDeviceDatabase/*pnp0600 Service atapi
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/IntelIde Start 0
+WriteNumberValue /HKLM/System/ControlSet001/Services/IntelIde Type 1
+WriteNumberValue /HKLM/System/ControlSet002/Services/IntelIde Start 0
+WriteNumberValue /HKLM/System/ControlSet002/Services/IntelIde Type 1
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/IntelIde Start 0
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/IntelIde Type 1
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/atapi Start 0
+WriteNumberValue /HKLM/System/ControlSet001/Services/atapi Type 1
+WriteNumberValue /HKLM/System/ControlSet002/Services/atapi Start 0
+WriteNumberValue /HKLM/System/ControlSet002/Services/atapi Type 1
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/atapi Start 0
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/atapi Type 1
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/pciide Start 0
+WriteNumberValue /HKLM/System/ControlSet001/Services/pciide Type 1
+WriteNumberValue /HKLM/System/ControlSet002/Services/pciide Start 0
+WriteNumberValue /HKLM/System/ControlSet002/Services/pciide Type 1
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/pciide Start 0
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/pciide Type 1
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/i8042prt Start 0
+WriteNumberValue /HKLM/System/ControlSet001/Services/i8042prt Type 1
+WriteNumberValue /HKLM/System/ControlSet002/Services/i8042prt Start 0
+WriteNumberValue /HKLM/System/ControlSet002/Services/i8042prt Type 1
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/i8042prt Start 0
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/i8042prt Type 1
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/1-driver-vmsrvc Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/1-driver-vmsrvc Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/1-driver-vmsrvc Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/1-vmsrvc Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/1-vmsrvc Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/1-vmsrvc Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/MRxVPC Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/MRxVPC Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/MRxVPC Start 4
+
+WriteNumberValue /HKLM/System/ControlSet001/Services/VPCMap Start 4
+WriteNumberValue /HKLM/System/ControlSet002/Services/VPCMap Start 4
+WriteNumberValue /HKLM/System/CurrentControlSet/Services/VPCMap Start 4

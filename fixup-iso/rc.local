@@ -1,0 +1,303 @@
+#!/bin/sh
+
+# Copyright (c) Citrix Systems Inc. 
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, 
+# with or without modification, are permitted provided 
+# that the following conditions are met: 
+# 
+# *   Redistributions of source code must retain the above 
+#     copyright notice, this list of conditions and the 
+#     following disclaimer. 
+# *   Redistributions in binary form must reproduce the above 
+#     copyright notice, this list of conditions and the 
+#     following disclaimer in the documentation and/or other 
+#     materials provided with the distribution. 
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+# SUCH DAMAGE.
+
+#
+#    xc_fixup.sh
+#
+#    Date: August 11, 2009
+#
+#    Abstract: This script is designed to be run against the virtual disk of a VM that
+#              has been exported from a Vmware environment as an OVF package.
+#              This script is designed to run on both Hyper-V and XenServer, and performs
+#              basic fix-ups to the operating system installed on the virtual disk to enable
+#              the virtual machine to boot.
+#
+#    Uses:
+#        ./xc_fixup.sh [no parameter]
+#                 This is the default option, will run full script.
+#        ./xc_fixup.sh [device name such as /dev/hdc1
+#                 This option will apply the fixup only on the device.
+#
+#    Note: for best uses please follow the bellow steps.
+#          1. Create a helper VM debian distribution to run this script.
+#          2. Then copy this script along with any accompanying files into a temporary fixup directory.
+#          3. Import the virtual machine to XenServer or Hyper-V using Kensho tools.
+#          4. simply detach Virtual harddisk from the VM and attach to Helper VM.
+#          5. Run boot the helper VM and run the scripts with admin privileges.
+#          6. shut down the helper VM, detach the Virtual disk, reattach to the VM and reboot.
+#
+#          * an alternative to creating a HelperVM on XenServer is to generate a DebianLive
+#            ISO adding this script to run as rc.local and automatically execute against
+#            all mounted volumes.
+#
+
+# Set the initial file system for fix-up, the IDE devices are checked first due to Kensho
+# creating HVM type virtual machines on XenServer which see the disk interfaces as IDE.
+# This also works on Hyper-V which only precents the boot devices as IDE.
+dev_list="/dev/hd*"
+
+# Set the Linux variables to fix GRUB and fstab
+file1="menu.lst"
+file2="fstab"
+fixup_root="/tmp/xc_fixup"
+mount_root="/tmp/xc_fixup/mnt"
+cab_root="/tmp/xc_fixup/cabtmp"
+
+check_errs()
+{
+  # Function. Parameter 1 is the return code
+  # Para. 2 is text to display on failure.
+  if [ "${1}" -ne "0" ]; then
+    echo "ERROR # ${1} : ${2}"
+    # as a bonus, make our script exit with the right error code.
+    exit ${1}
+  fi
+  if [ "${1}" -eq "0" ]; then
+    sleep 1
+  fi
+}
+
+# $mount_root is NTFS
+# 755 /usr/bin/regmod
+# 755 /usr/bin/cabextract
+# 644 /root/kensho.script
+# 644 /root/vmware.script
+
+fix_windows()
+{
+   echo "---Kensho: Windows Fixup Started."
+   mkdir $cab_root >/dev/null 2>&1
+   
+   cd $mount_root
+   #Install (pciidex.sys) only if it doesn't exist.
+   pciidex_path=`find . -name pciidex.sys -print | grep drivers`
+   echo "---Kensho: pciidex=[$pciidex_path]"
+   if [ ! -f $pciidex_path ]; then
+        echo "---Kensho: installing: pciidex.sys"
+        cablist=`find . -name *.cab -print | grep "Driver Cache"`
+        # should be in form:
+        # ./dir/Driver Cache/dir/file.cab ./dir/Driver Cache/dir/file.cab
+        # need to change to:
+        # "./dir/Driver Cache/dir/file.cab" "./dir/Driver Cache/dir/file.cab"
+        cablist=`echo $cablist | sed 's/\.\//\"\.\//g' | sed 's/cab/cab\"/g'`
+        echo "---Kensho: DriverCABs: [$cablist]"
+		/usr/bin/cabextract -d $cab_root $cablist
+		echo "---Kensho: cp $cab_root/pciidex.sys $pciidex_path"
+		cp $cab_root/pciidex.sys $pciidex_path
+   fi
+   
+   echo "---Kensho: OS Fixup being called."
+   /usr/bin/regmod -e /root/kensho.script $mount_root
+   echo "---Kensho: Vmware Fixup being called."
+   /usr/bin/regmod -e /root/vmware.script $mount_root
+   echo "---Kensho: Windows Fixup Completed."
+   
+   # Give a second to be able to follow on the screen
+   sleep 5
+   
+}
+
+check_parameters()
+{
+    #Be sure that a disk device is passed prior to attempting to execute the script
+    if [ "x$1" != "x" ]; then
+
+        echo "Checking needed fix-up for device" $1
+        umount $mount_root 2>/dev/null 
+        mount $1 $mount_root 2>/dev/null >/dev/null
+        echo $1 "mounted for file system check"
+        
+        if [ "$?" != "0" ]; then
+            echo "skipping devices" $1
+            exit $?
+        fi
+        
+        #check_errs $? "Couldn't mount filesystem on "$1
+
+        # The volume is mounted, now we need to read the file system to determine what to do next
+        
+        # Determine the file system for fix-up consideration
+        fstype=$(df -T $1 | tail -1 | awk '{print $2}')
+        echo $fstype
+
+        if [ "x$fstype" = "xiso9660" ]; then
+            echo "Do nothing, it is an ISO"
+            exit 0
+
+        elif [ "x$fstype" = "xtmpfs" ]; then
+            echo "Do nothing, it is a Linux swap volume"
+            exit 0
+                
+        elif [ "x$fstype" = "xntfs" ]; then 
+            echo "NTFS file system detected, run the fix-up for Windows operating systems"
+
+            ########################################
+            # Fix-up for Windows operating systems #
+            ########################################
+
+            # unmount and remount in case the NTFS volume is tagged dirty for some reason
+            umount $mount_root
+            sleep 1
+            /usr/bin/ntfs-3g $1 $mount_root -o force
+            
+            echo "Calling Windows fixup"
+            fix_windows
+            
+            # umount the volume to allow ntfsfix to do its work
+            umount $mount_root
+            
+            # Run ntfsfix to handle some common NTFS problems, this is not equal to chkdsk.
+            # ntfsfix repairs some fundamental NTFS inconsistencies, resets the NTFS journal file
+            # and schedules an NTFS consistency check for the first boot into Windows.
+            # /usr/bin/ntfsfix $1
+     
+          
+            ####################################
+            # End of the Windows fixup section #
+            ####################################
+            
+            echo "Windows VM fix-up is complete"
+
+            exit 0
+            
+        else
+            echo "One of many Linux file systems, repairing GRUB"
+            
+            ######################################
+            # Fix-up for Linux operating systems #
+            ######################################
+            
+            #patch boot entries
+            f2=$mount_root/grub/$file1
+            if [ -f $f2 ]; then 
+                echo "checking fixup for file:" $f2
+                sed 's/\/dev\/sd/\/dev\/hd/' $f2 > /tmp/$file1.new; 
+                mv /tmp/$file1.new $f2; 
+                check_errs $? "Couldn't move file"
+            fi
+
+            #patch boot entries when root contains boot
+            f2=$mount_root/boot/grub/$file1
+            if [ -f $f2 ]; then 
+                echo "checking fixup for file:" $f2
+                sed 's/\/dev\/sd/\/dev\/hd/' $f2 > /tmp/$file1.new; 
+                mv /tmp/$file1.new $f2; 
+                check_errs $? "Couldn't move file"
+            fi
+         
+            #patch fstab entries
+            f2=$mount_root/etc/$file2
+            if [ -f $f2 ]; then 
+                echo "checking fixup for file:" $f2
+                sed 's/\/dev\/sd/\/dev\/hd/' $f2 > /tmp/$file2.new; 
+                mv /tmp/$file2.new $f2; 
+                check_errs $? "Couldn't move file"
+            fi
+
+
+            # umount the volume to allow fsck to do its work
+            umount $mount_root
+
+            ## Run fsck to compensate for file system issues introduced with the import process
+            # if [ "x$fstype" = "xreiserfs" ]; then 
+            #  fsck.reiserfs --fix-fixable --yes $1
+            #  # --rebuild-tree needs to be run but cannot be scripted do to the potential for damage
+            #else
+            #    /sbin/fsck -pf $1
+            #fi
+
+			# Give a second to be able to follow on the screen
+			sleep 1
+
+            ##################################
+            # End of the Linux fixup section #
+            ##################################
+            
+            echo "Linux VM fix-up is complete"
+
+            exit 0
+            
+            
+        fi
+
+    fi
+
+}
+
+################################### main section #####################
+
+
+echo #blank line
+echo Running $0[$1] scripts to fixup Citrix Kensho imported VM...
+
+check_parameters $1  # caller might call this for individual device
+
+# make sure temporary directory exists.
+mkdir $fixup_root 2> /dev/null
+mkdir $mount_root 2> /dev/null
+ls -l $mount_root 2> /dev/null > /dev/null
+check_errs $? "Couldn't create temporary mounting root at $mount_root, exiting..."
+
+ls -1 $dev_list 2> /dev/null > /dev/null
+
+# this is being commented out, it would only be necessary if this script was running in a PV'd virtual machine
+# if [ "$?" -eq "2" ]; then 
+#    echo "file not found, dev_list changing to /dev/xvd*"
+#    echo $?
+#    dev_list=/dev/xvd*
+#    ls -1 $dev_list 2> /dev/null > /dev/null
+# fi
+
+check_errs $? "no device found to run fix-up for $dev_list"
+
+script_name=$0
+#df -T /dev/hda1 | awk 
+#ls -1 $dev_list | awk '{system ("echo -n  " $1 " \"  \"; tune2fs -l " $1 " 2> /dev/null | grep -c magic ")}' | awk '/1$/ {system ("'$script_name' " $1 " ")}'
+
+# echo "Start my squ-awk-ing..."
+ls -1 $dev_list | awk '{system ("'$script_name' " $1 " ")}'
+
+check_errs $? "Couldn't process all device for fix-up successfully.."
+
+#unmount the root if needed and clean up
+#echo "umount $mount_root"
+umount $mount_root 2> /dev/null > /dev/null
+
+echo
+echo "Kensho VM fixup is complete."
+
+sleep 3
+
+# shutdown the Debian Live
+/sbin/shutdown now -hP
+
+exit 0

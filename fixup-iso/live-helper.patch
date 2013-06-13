@@ -1,0 +1,217 @@
+# Copyright (c) Citrix Systems Inc. 
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, 
+# with or without modification, are permitted provided 
+# that the following conditions are met: 
+# 
+# *   Redistributions of source code must retain the above 
+#     copyright notice, this list of conditions and the 
+#     following disclaimer. 
+# *   Redistributions in binary form must reproduce the above 
+#     copyright notice, this list of conditions and the 
+#     following disclaimer in the documentation and/or other 
+#     materials provided with the distribution. 
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+# CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF 
+# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
+# SUCH DAMAGE.
+
+--- /usr/bin/lh_config	2010-02-21 10:25:21.000000000 +0000
++++ /usr/bin/lh_config	2010-02-21 10:28:45.000000000 +0000
+@@ -90,6 +90,8 @@
+ \t    [-m|--mirror-bootstrap URL]\n\
+ \t    [--mirror-chroot URL]\n\
+ \t    [--mirror-chroot-security URL]\n\
++\t    [--mirror-chroot-source URL]\n\
++\t    [--mirror-chroot-security-source URL]\n\
+ \t    [--mirror-binary URL]\n\
+ \t    [--mirror-binary-security URL]\n\
+ \t    [--mode debian|emdebian]\n\
+@@ -132,7 +134,7 @@
+ 		cache-stages:,debconf-frontend:,debconf-nowarnings:,debconf-priority:,dump,genisoimage:,
+ 		initramfs:,fdisk:,losetup:,mode:,root-command:,use-fakeroot:,tasksel:,includes:,
+ 		templates:,architecture:,bootstrap-config:,bootstrap-flavour:,bootstrap-keyring:,clean,
+-		distribution:,mirror-bootstrap:,mirror-chroot:,mirror-chroot-security:,mirror-binary:,
++		distribution:,mirror-bootstrap:,mirror-chroot:,mirror-chroot-security:,mirror-chroot-source:,mirror-chroot-security-source:,mirror-binary:,
+ 		mirror-binary-security:,categories:,chroot-filesystem:,union-filesystem:,exposed-root:,
+ 		hooks:,interactive:,keyring-packages:,language:,linux-flavours:,linux-packages:,
+ 		packages:,packages-lists:,tasks:,security:,symlinks:,sysvinit:,binary-filesystem:,binary-images:,
+@@ -384,6 +386,16 @@
+ 				shift 2
+ 				;;
+ 
++			--mirror-chroot-source)
++				LH_MIRROR_CHROOT_SOURCE="${2}"
++				shift 2
++				;;
++
++			--mirror-chroot-security-source)
++				LH_MIRROR_CHROOT_SECURITY_SOURCE="${2}"
++				shift 2
++				;;
++
+ 			--mirror-binary)
+ 				LH_MIRROR_BINARY="${2}"
+ 				shift 2
+@@ -928,6 +940,14 @@
+ # (Default: ${LH_MIRROR_CHROOT_SECURITY})
+ LH_MIRROR_CHROOT_SECURITY="${LH_MIRROR_CHROOT_SECURITY}"
+ 
++# \$LH_MIRROR_CHROOT_SOURCE: set mirror to fetch source from
++# (Default: ${LH_MIRROR_CHROOT_SOURCE})
++LH_MIRROR_CHROOT_SOURCE="${LH_MIRROR_CHROOT_SOURCE}"
++
++# \$LH_MIRROR_CHROOT_SECURITY_SOURCE: set security mirror to fetch source from
++# (Default: ${LH_MIRROR_CHROOT_SECURITY_SOURCE})
++LH_MIRROR_CHROOT_SECURITY_SOURCE="${LH_MIRROR_CHROOT_SECURITY_SOURCE}"
++
+ # \$LH_MIRROR_BINARY: set mirror which ends up in the image
+ # (Default: ${LH_MIRROR_BINARY})
+ LH_MIRROR_BINARY="${LH_MIRROR_BINARY}"
+--- /usr/bin/lh_chroot_sources	2010-01-23 22:48:17.000000000 +0000
++++ /usr/bin/lh_chroot_sources	2010-02-21 10:30:36.000000000 +0000
+@@ -26,10 +26,23 @@
+ # Requiring stage file
+ Require_stagefile .stage/config .stage/bootstrap
+ 
++function cleanup_distros()
++{
++  umount chroot/distros || true
++  umount chroot/distfiles || true
++}
++
+ _LH_LOCAL_KEY_EMAIL="live-helper-local-key@invalid"
+ 
+ case "${1}" in
+ 	install)
++		cleanup_distros
++		mkdir -p chroot/distros
++		mkdir -p chroot/distfiles
++		mount -o bind /distros chroot/distros
++		mount -o bind /distfiles chroot/distfiles
++		trap cleanup_distros ERR
++
+ 		Echo_message "Configuring file /etc/apt/sources.list"
+ 
+ 		# Checking stage file
+@@ -46,7 +59,7 @@
+ 
+ 		if [ "${LH_SOURCE}" = "enabled" ]
+ 		then
+-			echo "deb-src ${LH_MIRROR_CHROOT} ${LH_DISTRIBUTION} ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
++			echo "deb-src ${LH_MIRROR_CHROOT_SOURCE} ${LH_DISTRIBUTION} ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
+ 		fi
+ 
+ 		if [ "${LH_SECURITY}" = "enabled" ]
+@@ -57,7 +70,7 @@
+ 
+ 				if [ "${LH_SOURCE}" = "enabled" ]
+ 				then
+-					echo "deb-src ${LH_MIRROR_CHROOT_SECURITY} ${LH_DISTRIBUTION}/updates ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
++					echo "deb-src ${LH_MIRROR_CHROOT_SECURITY_SOURCE} ${LH_DISTRIBUTION}/updates ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
+ 				fi
+ 			fi
+ 		fi
+@@ -356,7 +369,7 @@
+ 
+ 			if [ "${LH_SOURCE}" = "enabled" ]
+ 			then
+-				echo "deb-src ${LH_MIRROR_BINARY} ${LH_DISTRIBUTION} ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
++				echo "deb-src ${LH_MIRROR_BINARY_SOURCE} ${LH_DISTRIBUTION} ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
+ 			fi
+ 
+ 			if [ "${LH_SECURITY}" = "enabled" ]
+@@ -367,7 +380,7 @@
+ 
+ 					if [ "${LH_SOURCE}" = "enabled" ]
+ 					then
+-						echo "deb-src ${LH_MIRROR_BINARY_SECURITY} ${LH_DISTRIBUTION}/updates ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
++						echo "deb-src ${LH_MIRROR_BINARY_SECURITY_SOURCE} ${LH_DISTRIBUTION}/updates ${LH_CATEGORIES}" >> chroot/etc/apt/sources.list
+ 					fi
+ 				fi
+ 			fi
+@@ -423,6 +436,9 @@
+ 			apt-key del ${_LH_LOCAL_KEY_EMAIL}
+ 		fi
+ 
++		cleanup_distros
++		trap - ERR
++
+ 		# Removing stage file
+ 		rm -f .stage/chroot_sources
+ 		;;
+--- /usr/bin/lh_binary	2010-01-23 17:50:33.000000000 +0000
++++ /usr/bin/lh_binary	2010-01-23 17:51:02.000000000 +0000
+@@ -82,6 +82,7 @@
+ then
+ 	# Deconfiguring chroot
+ 	rm -f .stage/chroot_sources
++	lh_chroot_sources remove ${*}
+ 	lh_chroot_hostname remove ${*}
+ 	lh_chroot_resolv remove ${*}
+ 	lh_chroot_hosts remove ${*}
+--- /usr/bin/lh_source	2010-01-23 17:50:33.000000000 +0000
++++ /usr/bin/lh_source	2010-01-23 17:51:02.000000000 +0000
+@@ -48,6 +48,7 @@
+ 
+ # Deconfiguring chroot
+ rm -f .stage/chroot_sources
++lh_chroot_sources remove ${*}
+ lh_chroot_hostname remove ${*}
+ lh_chroot_resolv remove ${*}
+ lh_chroot_hosts remove ${*}
+--- /usr/share/live-helper/functions/packages.sh	2010-01-23 17:50:33.000000000 +0000
++++ /usr/share/live-helper/functions/packages.sh	2010-01-23 17:51:02.000000000 +0000
+@@ -32,7 +32,7 @@
+ 	then
+ 		case "${LH_APT}" in
+ 			apt|apt-get)
+-				Chroot chroot "apt-get install -o APT::Install-Recommends=false --yes ${_LH_PACKAGES}"
++				Chroot chroot "apt-get install -o APT::Install-Recommends=false --yes --force-yes ${_LH_PACKAGES}"
+ 				;;
+ 
+ 			aptitude)
+--- /usr/share/live-helper/functions.sh	2010-01-23 17:50:33.000000000 +0000
++++ /usr/share/live-helper/functions.sh	2010-01-23 17:51:02.000000000 +0000
+@@ -1,5 +1,7 @@
+ #!/bin/sh
+ 
++set -x
++
+ LH_BASE="${LH_BASE:-/usr/share/live-helper}"
+ 
+ for FUNCTION in "${LH_BASE}"/functions/*.sh
+--- /usr/share/live-helper/hooks/minimal	2010-01-26 11:12:47.000000000 +0000
++++ /usr/share/live-helper/hooks/minimal	2010-01-26 11:14:55.000000000 +0000
+@@ -21,7 +21,7 @@
+ apt-get autoremove --yes || true
+ 
+ # Removing unused files
+-find . -name *~ -print0 | xargs -0 rm -f
++find . -xdev -name *~ -print0 | xargs -0 rm -f
+ 
+ rm -rf /var/cache/man/*
+ 
+--- /usr/share/live-helper/hooks/stripped	2010-01-26 11:12:51.000000000 +0000
++++ /usr/share/live-helper/hooks/stripped	2010-01-26 11:15:05.000000000 +0000
+@@ -21,7 +21,7 @@
+ apt-get autoremove --yes || true
+ 
+ # Removing unused files
+-find . -name *~ | xargs rm -f
++find . -xdev -name *~ | xargs rm -f
+ 
+ rm -rf /usr/include/*
+ #rm -rf /usr/share/groff/*
