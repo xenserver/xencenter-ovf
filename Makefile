@@ -34,8 +34,8 @@ IMPORT_BRANDING := yes
 include $(B_BASE)/common.mk
 
 REPONAME := xencenter-ovf
-REPO := $(call hg_loc,$(REPONAME))
-REPOSTAMP := $(call hg_req,$(REPONAME))
+REPO := $(call git_loc,$(REPONAME))
+REPOSTAMP := $(call git_req,$(REPONAME))
 
 LENNY_DISTFILES := $(CARBON_DISTFILES)/chroot-lenny
 
@@ -71,7 +71,7 @@ build: $(OUTPUT)
 -include $(MY_OBJ_DIR)/version.inc
 $(MY_OBJ_DIR)/version.inc: $(REPOSTAMP)
 	rm -f $@
-	$(call hg_cset_number,$(REPONAME)) > $@
+	$(call git_cset_number,$(REPONAME)) > $@
 
 $(MY_OUTPUT_DIR)/$(ZIP): $(FIXUP_ISO)
 	$(call mkdir_clean, $(ZIP_DIR))
